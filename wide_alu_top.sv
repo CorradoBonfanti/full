@@ -1,13 +1,16 @@
-`include "register_interface/typedef.svh"
-`include "register_interface/assign.svh"
+`include "../register_interface/include/register_interface/typedef.svh"
+`include "../register_interface/include/register_interface/assign.svh"
 
 module wide_alu_top
+     import wide_alu_reg_pkg::wide_alu_reg2hw_t;
+     import wide_alu_reg_pkg::wide_alu_hw2reg_t;
+     import wide_alu_pkg::optype_e;
      #(
        parameter int unsigned AXI_ADDR_WIDTH = 32,
        localparam int unsigned AXI_DATA_WIDTH = 32,
        parameter int unsigned AXI_ID_WIDTH,
        parameter int unsigned AXI_USER_WIDTH
-       )
+   )
    (
     input logic clk_i,
     input logic rst_ni,
@@ -15,12 +18,10 @@ module wide_alu_top
 
     AXI_BUS.Slave axi_slave
     );
-
-   import wide_alu_reg_pkg::wide_alu_reg2hw_t;
-   import wide_alu_reg_pkg::wide_alu_hw2reg_t;
+   
 
    //wiring signals
-   REG_BUS #(.ADDR_WIDTH(32), .DATA_WIDTH(32)) axi_to_regfile();
+   REG_BUS #(.ADDR_WIDTH(32), .DATA_WIDTH(32)) axi_to_reg_file();
    wide_alu_reg2hw_t reg_file_to_ip;
    wide_alu_hw2reg_t ip_to_reg_file;
 
@@ -49,7 +50,7 @@ module wide_alu_top
    `REG_BUS_ASSIGN_TO_REQ(to_reg_file_req, axi_to_reg_file)
    `REG_BUS_ASSIGN_FROM_RSP(axi_to_reg_file, from_reg_file_rsp)
 
-   module wide_alu_reg_top #(
+   wide_alu_reg_top #(
      .reg_req_t(reg_req_t),
      .reg_rsp_t(reg_rsp_t)
    ) i_regfile (
@@ -59,7 +60,7 @@ module wide_alu_top
      .reg_req_i(to_reg_file_req),
      .reg_rsp_o(from_reg_file_rsp),
      .reg2hw(reg_file_to_ip), // Write
-     .hw2reg(ip_to_reg_file), // Read
+     .hw2reg(ip_to_reg_file) // Read
    );
 
    wide_alu i_wide_alu(
@@ -73,8 +74,8 @@ module wide_alu_top
      .deaccel_factor_i(reg_file_to_ip.ctrl2.delay.q),
      .deaccel_factor_o(ip_to_reg_file.ctrl2.delay.d),
      .op_sel_we_i(reg_file_to_ip.ctrl2.opsel.qe),
-     .op_sel_i(wide_alu_pkg::optype_e'(reg_file_to_ip.ctrl2.opsel.q)),
-     .op_sel_o(wide_alu_pkg::optype_e'(ip_to_reg_file.ctrl2.opsel.d)),
+     .op_sel_i(reg_file_to_ip.ctrl2.opsel.q),
+     .op_sel_o(ip_to_reg_file.ctrl2.opsel.d),
      .result_o(ip_to_reg_file.result),
      .status_o(ip_to_reg_file.status.d)
      );
